@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ColdFlow - Professional Outreach CRM</title>
+
+    <!-- CDNs (Production Versions) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+    <script src="https://unpkg.com/recharts@2.10.3/umd/Recharts.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
+    <style>
+        /* ============================================================================
+           PREMIUM CRM DESIGN SYSTEM - HUBSPOT LEVEL
+           ============================================================================ */
+        :root {
+            --color-primary: #0B5CFF;
+            --color-primary-hover: #0046E5;
+            --color-primary-light: #EBF3FF;
+            --color-success: #10B981;
+            --color-success-light: #ECFDF5;
+            --color-warning: #F59E0B;
+            --color-warning-light: #FEF3C7;
+            --color-danger: #EF4444;
+            --color-danger-light: #FEE2E2;
+            --color-bg-base: #F8FAFC;
+            --color-bg-card: #FFFFFF;
+            --color-border: #E2E8F0;
+            --color-text-primary: #0F172A;
+            --color-text-secondary: #475569;
+            --color-text-tertiary: #94A3B8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--color-bg-base);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            font-size: 14px;
+            color: var(--color-text-primary);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Fixed Layout Grid Integrity */
+        .grid-precision {
+            display: grid;
+            gap: 16px;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #CBD5E1;
+            border-radius: 20px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        /* Premium Table Styles */
+        .premium-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .premium-table th {
+            text-align: left;
+            padding: 16px 24px;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #94A3B8;
+            background: #F8FAFC;
+            border-bottom: 2px solid #F1F5F9;
+        }
+
+        .premium-table td {
+            padding: 20px 24px;
+            border-bottom: 1px solid #F1F5F9;
+        }
+
+        /* Sidebar Shadow and Glass */
+        .sidebar-premium {
+            box-shadow: 4px 0 24px -10px rgba(0, 0, 0, 0.05);
+            background: white;
+        }
+
+        /* Status Badge Variants */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo, createContext, useContext } = React;
+        const { motion, AnimatePresence } = window.Motion || { motion: { div: 'div' }, AnimatePresence: ({ children }) => children };
+        const {
+            ResponsiveContainer, AreaChart, Area, XAxis, YAxis,
+            CartesianGrid, Tooltip, BarChart, Bar
+        } = window.Recharts || {};
+
+        // --- LUCIDE ICON HELPER (PRODUCTION ROBUST) ---
+        const Icon = ({ name, size = 20, className = "", color = "currentColor", strokeWidth = 2 }) => {
+            const iconRef = useRef(null);
+            useEffect(() => {
+                if (window.lucide && iconRef.current) {
+                    window.lucide.createIcons({
+                        icons: { [name]: window.lucide.icons[name] },
+                        nameAttr: 'data-lucide',
+                        attrs: {
+                            'stroke-width': strokeWidth,
+                            'stroke': color,
+                            'width': size,
+                            'height': size,
+                            'class': className
+                        }
+                    });
+                }
+            }, [name, size, color, strokeWidth, className]);
+
+            return <i ref={iconRef} data-lucide={name} className={className} style={{ width: size, height: size, display: 'inline-block' }} />;
+        };
+
+        // --- DATA STORE (IDENTICAL TO OG) ---
+        const STORAGE_KEYS = {
+            ACCOUNTS: 'crm_accounts_v1',
+            ACTIVITIES: 'crm_activities_v1',
+            BATCHES: 'crm_batches_v1',
+            WEBHOOK_URL: 'crm_webhook_url',
+            API_URL: 'crm_api_url',
+            WEBHOOK_LOCKED: 'crm_webhook_locked',
+            TEST_MODE: 'crm_test_mode'
+        };
+
+        const INITIAL_ZO_DATA = {
+            "accounts": [
+                { "email": "alex@udaanxai.online", "client_id": "1000.HPNEV72XIZ3RNQZGS5J5GYSEFH0O6B", "client_secret": "6f5c24b3fca836782afda5cb1f846e8c449005cdf5", "refresh_token": "1000.a0346f5c6880fb317d88c371374c9d4f.78ab9831033d6f38453ac9fb7d5bc80a" },
+                { "email": "james@udaanxai.online", "client_id": "1000.BA7A3WVVDK0UH44WEH971771NKZ7BU", "client_secret": "7894d1872c86545ed9d83321f4e2ef6dedca595c58", "refresh_token": "1000.f4a0bc1c347754038fe5684103e4df4b.73f1d6d9bedca2072f9ded8b216ea520" },
+                { "email": "jordan@udaanxai.online", "client_id": "1000.Q4AY8WNWRFD4T7O130C93V5HCZDYMG", "client_secret": "2140299b76af10ef550eb44fac6cdb355f5078b66f", "refresh_token": "1000.3297352181454942627b88734c3f9360.81a4b6e194a55da89489f469109742e3" },
+                { "email": "mike@udaanxai.online", "client_id": "1000.7SDTTMQSOFGMYLWB1OPVMSAPA6S4EU", "client_secret": "3cd8cee8f0af79e66490f877c9e235ff84bbfc7c14", "refresh_token": "1000.cdaba0e9e2f652a2f67590ba2e4130dd.9058b67fa5dc062bdcb5050bbcdb0110" },
+                { "email": "sarah@udaanxai.online", "client_id": "1000.AMG8A9XTSS4EHX0YD9AFGQA0LLVSYY", "client_secret": "65302d6db3658e837965e785a916ed106b13586976", "refresh_token": "1000.7dafda00517f5528ea0a9d09f0407084.2fdfedaecacccdeeafe32a298c2af42f" },
+                { "email": "ozzy@udaanxai.site", "client_id": "1000.U30QVRM83ZMKDPEZM96NR05SC0KN4U", "client_secret": "b9b7d79d40eacc020fc5386dca9af6cdbc75c97dd8", "refresh_token": "1000.e3563ae07b4a06a3945870520dbb090d.f5dd520ae6cfdb392c35a6d77a288024" },
+                { "email": "emma@udaanxai.site", "client_id": "1000.4QZ16MP51OYIO0F2RZU1LLZR33JJZF", "client_secret": "f0c048e494b9b6341a1676288dfaa69bfd8794b53f", "refresh_token": "1000.1e691cde025f144e2c0f4594b09fecf2.6d26f80f3f984c5e9c52dcc81e46d9c6" },
+                { "email": "kate@udaanxai.site", "client_id": "1000.JDPFYBCX0SSBOEIJU77I3Y1OKGCJEG", "client_secret": "3ac7efa1f06d8082e110ac8836557bce01fdb49aa6", "refresh_token": "1000.f83c6ba2c16cd318e6b4fc04e28de2cc.c83f4f10bbfb2e0559f54278cff9bd3c" },
+                { "email": "anna@udaanxai.site", "client_id": "1000.64QYWLTISJ27KC62FDBTIHDBVIVQ1H", "client_secret": "8ef751545507ecc683c61e8f3ae6525c44dbf34d5f", "refresh_token": "1000.2a21405725d2ebd5dcee145fa2cc0ab9.0764b97b367b12368d1a53a73e9ca6b0" },
+                { "email": "ben@udaanxai.site", "client_id": "1000.D7VVNGW50MAHN3W5W0NLBBV6FQEYXK", "client_secret": "b755452964fecb960ecd68d4614b63bf9f680751f6", "refresh_token": "1000.be4ef47836bf16779f4bb554029745b9.874db6f28ce4a5f1851f9bcc4291356d" },
+                { "email": "tom@udaanxautomation.online", "client_id": "1000.IAS3O7WVHX79ONDX1ATEPKOH1EYV3N", "client_secret": "95775378ed79b6ed0a61f5eea85ab32bd069a75c30", "refresh_token": "1000.bdf1f9f7bc0c7facaaf725c90d9cc287.07841eab2aa2f1a4e1d72cab857dfd84" },
+                { "email": "daniel@udaanxautomation.online", "client_id": "1000.LVQX127N0KRJAVQ69HB6EN73UE8CCR", "client_secret": "b2cc28dd7a594a5525bfe9e1a49bfa5a4ab4c719c0", "refresh_token": "1000.7e921cbd64e74cf820ddcc51744557cb.8baec0ebb4364e56019478bd94661697" },
+                { "email": "jess@udaanxautomation.online", "client_id": "1000.NKBJG7O2GWJGKTZDU87LP1EUCBXBDI", "client_secret": "b6c2a25e29cb26a8963d61b23ac411bd36a32b2fc2", "refresh_token": "1000.d966b7b584b0b99bf40acc14764b3d53.437e38610e058c7bfa31b05257dec227" },
+                { "email": "matt@udaanxautomation.online", "client_id": "1000.6PMXIV6CP2WYS3E0V6BKH3Y9P9D5LL", "client_secret": "e0126863c11ef2b92f195f0bcc58776fd40afcbd92", "refresh_token": "1000.5b62da2f83168d50247c8acc4384290b.8d83caae2af5d1d0d94ce192d3def0b9" },
+                { "email": "nick@udaanxautomation.online", "client_id": "1000.DFFHN9ZXBR9597QP0Y1NPHGN4F8E0Y", "client_secret": "3815d298a9876ad94025c9ca80e961ba33e99e3a15", "refresh_token": "1000.ce117f7c02f92f1e6b2d854994b98257.26d1b0872546213c372c3a7c74d03643" },
+                { "email": "ryan@udaanxautomation.site", "client_id": "1000.AYODL0P8Z2873EURLS3ENDSEVD7UZC", "client_secret": "0b65d8eb0369a25da57b6f06b2c1c5bbc59cc4ec0b", "refresh_token": "1000.6b1dfeadf1de40affe49e360e59bf6fe.fa90cdaab59086fd50977fe7eed07242" },
+                { "email": "laura@udaanxautomation.site", "client_id": "1000.09G0YLQTQS7E614ZV1D9GBIEQT74FD", "client_secret": "f07403ddf40bfa4161b86693e7022efc9047ac839e", "refresh_token": "1000.4ab9591875d735c86a4dd590de0e9022.de9391dd3af1c2f6e06cfb0a230a4a1c" },
+                { "email": "megan@udaanxautomation.site", "client_id": "1000.AGU4VYZC2HKL5KOHB9UFEJH4YEHKPS", "client_secret": "8e00a12c06f53b35df2f4d5da40e2f801dfa8ad599", "refresh_token": "1000.b2dad34bd1148b8ebb10dd09b873bd2e.cbd8e737b9b89a54c3ad5eb78313166f" },
+                { "email": "hannah@udaanxautomation.site", "client_id": "1000.TQ7NJB6W80MAB68I9Y0LE3U8GE8VJH", "client_secret": "7fb4fbe914e45f55352991cdf82be82fbb1a9c0673", "refresh_token": "1000.7733de331e9ec6a0d68f0d0587dda886.96cd488929d7f3cb77d51f9befe0a550" },
+                { "email": "sam@udaanxautomation.site", "client_id": "1000.MSKLI0O3LFDZQQKBVBPIODLN6SEOBM", "client_secret": "f22aee8d1c4c977825102f829d3bfea9cb3a68bd44", "refresh_token": "1000.3f968279a0cfee77e4c8de3dd5e9b5d1.3ea9cfe08b8afa9ec67ab3a0ca202def" }
+            ]
+        };
+
+        const DataStore = {
+            init: () => {
+                if (!localStorage.getItem(STORAGE_KEYS.ACCOUNTS)) {
+                    localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(INITIAL_ZO_DATA.accounts.map(a => ({
+                        ...a,
+                        account_id: `acc_${Math.random().toString(36).substr(2, 9)}`,
+                        name: a.email.split('@')[0],
+                        domain: a.email.split('@')[1],
+                        health_score: 98,
+                        total_sent: 0, total_replied: 0, total_opened: 0,
+                        reply_rate: 0,
+                        status: 'warming_up'
+                    }))));
+                }
+                if (!localStorage.getItem(STORAGE_KEYS.ACTIVITIES)) localStorage.setItem(STORAGE_KEYS.ACTIVITIES, '[]');
+                if (!localStorage.getItem(STORAGE_KEYS.BATCHES)) localStorage.setItem(STORAGE_KEYS.BATCHES, '[]');
+            },
+            getAccounts: () => JSON.parse(localStorage.getItem(STORAGE_KEYS.ACCOUNTS) || '[]'),
+            getActivities: () => JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVITIES) || '[]'),
+            getBatches: () => JSON.parse(localStorage.getItem(STORAGE_KEYS.BATCHES) || '[]'),
+            saveBatches: (b) => localStorage.setItem(STORAGE_KEYS.BATCHES, JSON.stringify(b)),
+            getDailyStats: () => {
+                const acts = DataStore.getActivities();
+                const data = [];
+                for (let i = 6; i >= 0; i--) {
+                    const d = new Date(); d.setDate(d.getDate() - i);
+                    const k = d.toISOString().split('T')[0];
+                    const day = acts.filter(a => a.timestamp.startsWith(k));
+                    data.push({
+                        date: k,
+                        total_sent: day.filter(a => a.action === 'sent').length,
+                        total_replied: day.filter(a => a.action === 'replied').length
+                    });
+                }
+                return data;
+            }
+        };
+
+        // --- CONTEXT ---
+        const SidebarContext = createContext();
+        const useSidebar = () => useContext(SidebarContext);
+
+        // --- COMPONENTS ---
+
+        const Sidebar = ({ activeTab, setActiveTab }) => {
+            const { isHidden } = useSidebar();
+            const items = [
+                { id: 'dashboard', label: 'Dashboard', icon: 'LayoutDashboard' },
+                { id: 'accounts', label: 'Sender Accounts', icon: 'Users' },
+                { id: 'leads', label: 'Lead Center', icon: 'UserPlus' },
+                { id: 'logs', label: 'Activity Feed', icon: 'MessageSquare' },
+                { id: 'analytics', label: 'Analytics', icon: 'BarChart' },
+                { id: 'settings', label: 'Settings', icon: 'Settings' }
+            ];
+
+            if (isHidden) return null;
+
+            return (
+                <div className="flex h-screen sticky top-0">
+                    <aside className="w-64 sidebar-premium border-r border-slate-200 flex flex-col z-40 bg-white">
+                        <div className="p-6 border-b border-slate-100">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-200">
+                                    <Icon name="Mail" color="white" />
+                                </div>
+                                <div>
+                                    <p className="font-black text-slate-900 tracking-tight text-lg">ColdFlow</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Outreach Intelligence</p>
+                                </div>
+                            </div>
+                        </div>
+                        <nav className="flex-1 p-4 overflow-y-auto space-y-2">
+                            {items.map(item => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => setActiveTab(item.id)}
+                                    className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all font-semibold text-sm border ${activeTab === item.id
+                                        ? 'bg-blue-50 text-blue-600 border-blue-100 shadow-sm'
+                                        : 'text-slate-500 border-transparent hover:bg-slate-50 hover:text-slate-900'
+                                        }`}
+                                >
+                                    <Icon name={item.icon} size={18} strokeWidth={activeTab === item.id ? 2.5 : 2} />
+                                    <span>{item.label}</span>
+                                </button>
+                            ))}
+                        </nav>
+                        <div className="p-4 border-t border-slate-100">
+                            <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-green-50/50 border border-green-100">
+                                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                <span className="text-[10px] font-black text-green-700 uppercase tracking-widest">Fleet Operational</span>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            );
+        };
+
+        window.triggerSend = async (batch) => {
+            const webhookUrl = localStorage.getItem(STORAGE_KEYS.WEBHOOK_URL);
+            const crmApiUrl = localStorage.getItem(STORAGE_KEYS.API_URL);
+
+            if (!webhookUrl) return { success: false, error: 'Webhook not configured.' };
+            if (!crmApiUrl) return { success: false, error: 'CRM API URL not configured.' };
+
+            const send = async (url) => {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({
+                        leads: batch.leads,
+                        batch_id: batch.id,
+                        filename: batch.name || batch.filename,
+                        timestamp: new Date().toISOString(),
+                        crm_url: crmApiUrl
+                    })
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return true;
+            };
+
+            try {
+                await send(webhookUrl);
+                return { success: true };
+            } catch (error) {
+                if (webhookUrl.includes('/webhook/')) {
+                    const testUrl = webhookUrl.replace('/webhook/', '/webhook-test/');
+                    try {
+                        await send(testUrl);
+                        return { success: true };
+                    } catch (e) {
+                        return { success: false, error: `Connection Refused: ${e.message}. Ensure n8n is listening.` };
+                    }
+                }
+                return { success: false, error: error.message };
+            }
+        };
+
+        const Dashboard = ({ onTabChange, isHidden, setIsHidden }) => {
+            const [stats, setStats] = useState({ daily: [], accounts: [], activities: [], today: { sent: 0, opened: 0, replied: 0 } });
+
+            useEffect(() => {
+                const load = () => {
+                    const daily = DataStore.getDailyStats();
+                    const accs = DataStore.getAccounts();
+                    const acts = DataStore.getActivities().filter(a => !a.is_warmup).slice(0, 10);
+                    const td = daily[daily.length - 1] || { total_sent: 0, total_replied: 0, total_opened: 0 };
+                    setStats({ daily, accounts: accs, activities: acts, today: td });
+                };
+                load();
+                const itv = setInterval(load, 5000);
+                return () => clearInterval(itv);
+            }, []);
+
+            return (
+                <div className="flex-1">
+                    <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200 h-[72px] flex items-center px-8">
+                        <div className="flex items-center gap-4">
+                            <button onClick={() => setIsHidden(!isHidden)} className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 transition-all text-slate-500">
+                                <Icon name="Menu" />
+                            </button>
+                            <div>
+                                <h1 className="text-xl font-black text-slate-900 tracking-tight">Main Hub</h1>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Aggregate Transmission Metrics</p>
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="p-8 max-w-[1600px] mx-auto animate-fade-in">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                            {[
+                                { label: 'Sent Today', val: stats.today.total_sent, icon: 'Send', color: '#3B82F6', bg: '#EFF6FF' },
+                                { label: 'Total Opens', val: stats.today.total_opened || 0, icon: 'Eye', color: '#F59E0B', bg: '#FFFBEB' },
+                                { label: 'Total Clicks', val: '0', icon: 'MousePointerClick', color: '#8B5CF6', bg: '#F5F3FF' },
+                                { label: 'Total Replies', val: stats.today.total_replied, icon: 'Reply', color: '#10B981', bg: '#ECFDF5' },
+                            ].map((m, i) => (
+                                <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="p-3 rounded-2xl" style={{ background: m.bg }}>
+                                            <Icon name={m.icon} color={m.color} size={24} />
+                                        </div>
+                                    </div>
+                                    <p className="text-3xl font-black text-slate-900 tracking-tighter leading-none">{m.val}</p>
+                                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mt-2">{m.label}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                            <div className="lg:col-span-2 bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm">
+                                <div className="flex justify-between items-end mb-8">
+                                    <div>
+                                        <h3 className="text-lg font-black text-slate-900 tracking-tight">Outreach Pulse</h3>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">7-Day Analysis</p>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-blue-500" /><span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Transmission</span></div>
+                                        <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500" /><span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Engagement</span></div>
+                                    </div>
+                                </div>
+                                <div className="h-[340px] w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={stats.daily}>
+                                            <defs>
+                                                <linearGradient id="gS" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3B82F6" stopOpacity={0.1} /><stop offset="95%" stopColor="#3B82F6" stopOpacity={0} /></linearGradient>
+                                                <linearGradient id="gR" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10B981" stopOpacity={0.1} /><stop offset="95%" stopColor="#10B981" stopOpacity={0} /></linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                                            <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 10, fontStyle: 'bold', fill: '#94A3B8' }} tickFormatter={s => new Date(s).toLocaleDateString([], { weekday: 'short' })} />
+                                            <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 10, fontStyle: 'bold', fill: '#94A3B8' }} />
+                                            <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }} />
+                                            <Area type="monotone" dataKey="total_sent" stroke="#3B82F6" strokeWidth={4} fill="url(#gS)" />
+                                            <Area type="monotone" dataKey="total_replied" stroke="#10B981" strokeWidth={4} fill="url(#gR)" />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                            <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm flex flex-col">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="text-lg font-black text-slate-900 tracking-tight">Elite Accounts</h3>
+                                    <button onClick={() => onTabChange('accounts')} className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline">Full Registry</button>
+                                </div>
+                                <div className="space-y-4 flex-1 overflow-y-auto pr-2">
+                                    {stats.accounts.sort((a, b) => b.total_replied - a.total_replied).slice(0, 8).map((acc, i) => (
+                                        <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-white transition-all transform hover:scale-[1.02] shadow-sm">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center font-black text-blue-600 text-xs shadow-sm shadow-blue-50">
+                                                    {acc.name.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="max-w-[110px]">
+                                                    <p className="text-sm font-black text-slate-800 truncate">{acc.name}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter truncate">{acc.domain}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm font-black text-emerald-600 leading-none">{acc.total_replied}</p>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase mt-1">REPLIES</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden animate-fade-in" style={{ animationDelay: '0.2s' }}>
+                            <div className="p-8 border-b border-slate-50 flex items-center justify-between">
+                                <h3 className="font-black text-slate-900 text-lg tracking-tight">Live Activity Stream</h3>
+                                <div className="px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-blue-100">Synchronized Pulse</div>
+                            </div>
+                            <div className="divide-y divide-slate-50">
+                                {stats.activities.length === 0 ? (
+                                    <div className="py-24 text-center">
+                                        <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mx-auto mb-6">
+                                            <div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-blue-500 animate-spin" />
+                                        </div>
+                                        <p className="text-sm font-black text-slate-300 uppercase tracking-widest">Awaiting First Client Transmission</p>
+                                    </div>
+                                ) : (
+                                    stats.activities.map((a, i) => (
+                                        <div key={i} className="px-10 py-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                                            <div className="flex items-center gap-5">
+                                                <div className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.6)] animate-pulse" />
+                                                <div>
+                                                    <p className="text-base font-black text-slate-900 tracking-tight">Outgoing Transmission to {a.to.split('@')[0]}</p>
+                                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">FROM: {a.from.split('@')[0]} <span className="mx-2">|</span> ID: {a.id.slice(-8).toUpperCase()}</p>
+                                                </div>
+                                            </div>
+                                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-lg border border-slate-200">
+                                                {new Date(a.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                            </p>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const AccountsPage = ({ isHidden, setIsHidden }) => {
+            const [accounts, setAccounts] = useState([]);
+            useEffect(() => setAccounts(DataStore.getAccounts()), []);
+
+            return (
+                <div className="flex-1">
+                    <header className="sticky top-0 z-30 bg-white border-b border-slate-100 h-[72px] flex items-center px-8">
+                        <div className="flex items-center gap-4">
+                            <button onClick={() => setIsHidden(!isHidden)} className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-500"><Icon name="Menu" /></button>
+                            <h1 className="text-xl font-black text-slate-900">Sender Fleet Registry</h1>
+                        </div>
+                    </header>
+                    <main className="p-8 max-w-[1600px] mx-auto animate-fade-in">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            {accounts.map((acc, i) => (
+                                <motion.div key={i} whileHover={{ y: -5 }} className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm relative overflow-hidden group">
+                                    <div className="flex justify-between items-start mb-8">
+                                        <div className="w-14 h-14 bg-blue-600 rounded-3xl flex items-center justify-center shadow-xl shadow-blue-100">
+                                            <Icon name="Mail" color="white" size={28} />
+                                        </div>
+                                        <span className="badge bg-green-50 text-green-600 border border-green-100">OPERATIONAL</span>
+                                    </div>
+                                    <h3 className="text-lg font-black text-slate-900 mb-1 truncate">{acc.email}</h3>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-8">{acc.domain}</p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Health</p>
+                                            <p className="text-xl font-black text-slate-900">{acc.health_score}%</p>
+                                        </div>
+                                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Sent</p>
+                                            <p className="text-xl font-black text-slate-900">{acc.total_sent}</p>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const LeadsPage = ({ isHidden, setIsHidden }) => {
+            const [activeTab, setActiveTab] = useState('archives');
+            const [batches, setBatches] = useState([]);
+            const [showModal, setShowModal] = useState(false);
+            const [sendingBatchId, setSendingBatchId] = useState(null);
+            const [tempBatch, setTempBatch] = useState({ name: '', leads: [], scheduled_date: new Date().toISOString().split('T')[0], scheduled_time: '' });
+
+            useEffect(() => {
+                const refresh = () => setBatches(DataStore.getBatches());
+                refresh();
+                window.addEventListener('storage', refresh);
+                return () => window.removeEventListener('storage', refresh);
+            }, []);
+
+            const sendBatchNow = async (batch) => {
+                setSendingBatchId(batch.id);
+                const res = await window.triggerSend(batch);
+                if (res.success) {
+                    const upd = batches.map(b => b.id === batch.id ? { ...b, status: 'sent' } : b);
+                    DataStore.saveBatches(upd);
+                    setBatches(upd);
+                    alert('TRANSMISSION SUCCESS: Data reached the internet workflow.');
+                } else {
+                    alert(`FIELD FAILURE: Could not reach the internet. ${res.error}. Check your n8n URL.`);
+                }
+                setSendingBatchId(null);
+            };
+
+            const deleteBatch = (id) => {
+                if (confirm('Permanently delete this outreach batch?')) {
+                    const upd = batches.filter(b => b.id !== id);
+                    DataStore.saveBatches(upd);
+                    setBatches(upd);
+                }
+            };
+
+            const onFile = (e) => {
+                const f = e.target.files[0]; if (!f) return;
+                const r = new FileReader();
+                r.onload = (ev) => {
+                    const text = ev.target.result;
+                    const lines = text.split('\n').filter(line => line.trim());
+                    if (lines.length < 2) return;
+
+                    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+                    const emailIdx = headers.findIndex(h => h === 'business_email' || h === 'email' || h === 'work_email');
+                    const businessIdx = headers.findIndex(h => h === 'business_name' || h === 'company');
+                    const fullNameIdx = headers.findIndex(h => h === 'contact_name' || h === 'name');
+
+                    const leads = [];
+                    for (let i = 1; i < lines.length; i++) {
+                        const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+                        const email = emailIdx >= 0 ? values[emailIdx] : '';
+                        if (!email || !email.includes('@')) continue;
+
+                        leads.push({
+                            id: `L_${Date.now()}_${i}`,
+                            business_name: businessIdx >= 0 ? values[businessIdx] || '' : '',
+                            business_email: email,
+                            contact_name: fullNameIdx >= 0 ? values[fullNameIdx] || '' : '',
+                            status: 'pending'
+                        });
+                    }
+                    setTempBatch({ ...tempBatch, name: f.name, leads });
+                    setShowModal(true);
+                };
+                r.readAsText(f);
+            };
+
+            const commit = () => {
+                const b = { ...tempBatch, id: `B_${Date.now()}`, created_at: new Date().toISOString(), status: 'pending' };
+                const upd = [b, ...batches];
+                DataStore.saveBatches(upd); setBatches(upd); setShowModal(false);
+            };
+
+            const allLeads = batches.flatMap(b => b.leads);
+
+            return (
+                <div className="flex-1">
+                    <header className="sticky top-0 z-30 bg-white border-b border-slate-200 h-[80px] flex items-center px-10">
+                        <div className="flex items-center gap-6 flex-1">
+                            <button onClick={() => setIsHidden(!isHidden)} className="p-3 rounded-2xl bg-slate-50 text-slate-500"><Icon name="Menu" /></button>
+                            <div>
+                                <h1 className="text-2xl font-black text-slate-900">Lead Intelligence Center</h1>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Campaign Extraction & Sequencing</p>
+                            </div>
+                        </div>
+                        <label className="h-[56px] px-10 bg-blue-600 text-white rounded-2xl font-black text-sm flex items-center gap-4 cursor-pointer shadow-2xl shadow-blue-100 hover:scale-[1.03] transition-all hover:bg-blue-700">
+                            <Icon name="Upload" color="white" /> IMPORT NEW ARCHIVE
+                            <input type="file" accept=".csv" onChange={onFile} className="hidden" />
+                        </label>
+                    </header>
+                    <main className="p-10 max-w-[1600px] mx-auto animate-fade-in">
+                        <div className="flex gap-4 mb-10 p-2.5 bg-white border-2 border-slate-100 rounded-[28px] max-w-fit shadow-sm">
+                            <button onClick={() => setActiveTab('archives')} className={`px-10 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'archives' ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-400'}`}>CAMPAIGNS ({batches.length})</button>
+                            <button onClick={() => setActiveTab('results')} className={`px-10 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'results' ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-400'}`}>INDIVIDUAL RESULTS ({allLeads.length})</button>
+                        </div>
+
+                        <div className="bg-white rounded-[48px] border-2 border-slate-100 shadow-2xl overflow-hidden shadow-slate-200/40">
+                            {activeTab === 'archives' ? (
+                                <table className="premium-table">
+                                    <thead>
+                                        <tr>
+                                            <th className="w-[45%]">Campaign Source</th>
+                                            <th className="text-center w-[15%]">Volume</th>
+                                            <th className="text-center w-[20%]">Scheduled Flow</th>
+                                            <th className="text-right w-[20%]">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y-2 divide-slate-50">
+                                        {batches.length === 0 ? (
+                                            <tr><td colSpan="4" className="py-32 text-center text-slate-300 font-bold uppercase tracking-widest">No local archives found</td></tr>
+                                        ) : batches.map(b => (
+                                            <tr key={b.id} className="hover:bg-slate-50/50 transition-all group">
+                                                <td className="px-10">
+                                                    <div className="flex items-center gap-6">
+                                                        <div className="w-14 h-14 bg-blue-50 rounded-3xl flex items-center justify-center group-hover:scale-110 transition-transform"><Icon name="FileText" color="#2563EB" size={24} /></div>
+                                                        <div><p className="text-lg font-black text-slate-900 mb-0.5">{b.name}</p><p className="text-[10px] font-bold text-slate-400 uppercase">Synchronized {new Date(b.created_at).toLocaleDateString()}</p></div>
+                                                    </div>
+                                                </td>
+                                                <td className="text-center">
+                                                    <div className="flex flex-col"><span className="text-2xl font-black text-slate-900">{b.leads.length}</span><span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">prospects</span></div>
+                                                </td>
+                                                <td className="text-center">
+                                                    <div className="inline-block px-5 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl font-black text-slate-700 text-xs">
+                                                        {b.scheduled_date} <span className="text-blue-500 mx-2">|</span> {b.scheduled_time || 'ASAP'}
+                                                    </div>
+                                                </td>
+                                                <td className="text-right px-10">
+                                                    <div className="flex items-center justify-end gap-4">
+                                                        <button
+                                                            onClick={() => sendBatchNow(b)}
+                                                            disabled={sendingBatchId === b.id}
+                                                            className={`h-[48px] px-8 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl transition-all flex items-center gap-2 justify-center ${sendingBatchId === b.id ? 'bg-slate-400' : 'bg-slate-900 text-white hover:scale-105 active:scale-95'}`}
+                                                        >
+                                                            <Icon name="Send" size={14} color="white" />
+                                                            {sendingBatchId === b.id ? 'INITIALIZING...' : 'SEND NOW'}
+                                                        </button>
+                                                        <button onClick={() => deleteBatch(b.id)} className="p-3 text-slate-300 hover:text-red-500 transition-colors">
+                                                            <Icon name="Trash2" size={20} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <table className="premium-table">
+                                    <thead>
+                                        <tr>
+                                            <th className="w-[30%]">Contact Identity</th>
+                                            <th className="w-[35%]">Network Address</th>
+                                            <th className="text-center w-[20%]">Wave Status</th>
+                                            <th className="text-right w-[15%]">Linked Cell</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {allLeads.map((l, i) => (
+                                            <tr key={i} className="hover:bg-slate-50/40 transition-colors">
+                                                <td>
+                                                    <p className="text-sm font-black text-slate-900 truncate">{l.contact_name}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5 tracking-tighter">Verified Prospect</p>
+                                                </td>
+                                                <td className="font-bold text-slate-600 text-sm truncate">{l.business_email}</td>
+                                                <td className="text-center">
+                                                    <span className="px-4 py-1.5 bg-slate-50 text-slate-400 rounded-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest">Enqueued</span>
+                                                </td>
+                                                <td className="text-right">
+                                                    <span className="text-[10px] font-black text-slate-500 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 truncate inline-block max-w-full">
+                                                        {batches.find(b => b.leads.some(ll => ll.id === l.id))?.name}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </main>
+
+                    <AnimatePresence>
+                        {showModal && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xl p-8">
+                                <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white rounded-[56px] w-full max-w-xl shadow-2xl p-14 border border-slate-200">
+                                    <h3 className="text-4xl font-black text-slate-900 tracking-tighter mb-4">Transmission Setup</h3>
+                                    <p className="text-sm text-slate-400 font-bold uppercase tracking-widest mb-12">{tempBatch.leads.length} filtered records from {tempBatch.name}</p>
+                                    <div className="space-y-10 mb-14">
+                                        <div className="grid grid-cols-2 gap-8">
+                                            <div className="space-y-4">
+                                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] ml-2">Phase Start Date</label>
+                                                <input type="date" value={tempBatch.scheduled_date} onChange={e => setTempBatch({ ...tempBatch, scheduled_date: e.target.value })} className="w-full h-16 rounded-[24px] border-2 border-slate-100 px-8 font-black focus:border-blue-500 bg-slate-50 outline-none" />
+                                            </div>
+                                            <div className="space-y-4">
+                                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] ml-2">Precision Time</label>
+                                                <input type="time" value={tempBatch.scheduled_time} onChange={e => setTempBatch({ ...tempBatch, scheduled_time: e.target.value })} className="w-full h-16 rounded-[24px] border-2 border-slate-100 px-8 font-black focus:border-blue-500 bg-slate-50 outline-none" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col gap-4">
+                                        <button onClick={commit} className="w-full h-20 bg-blue-600 text-white rounded-[28px] font-black uppercase tracking-[0.2em] text-[13px] shadow-2xl shadow-blue-200 hover:scale-[1.02] active:scale-95 transition-all">🚀 Launch Campaign</button>
+                                        <button onClick={() => setShowModal(false)} className="w-full py-2 text-slate-300 font-black text-[11px] uppercase tracking-widest hover:text-red-500 transition-all">Cancel and Discard</button>
+                                    </div>
+                                </motion.div>
+                            </div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            );
+        };
+
+        const AnalyticsPage = ({ isHidden, setIsHidden }) => {
+            const [stats, setStats] = useState({
+                totalSent: 0, totalOpened: 0, totalReplied: 0,
+                avgHealth: 0, openRate: 0, replyRate: 0
+            });
+
+            useEffect(() => {
+                const accounts = DataStore.getAccounts();
+                const totalSent = accounts.reduce((sum, a) => sum + (a.total_sent || 0), 0);
+                const totalOpened = accounts.reduce((sum, a) => sum + (a.total_opened || 0), 0);
+                const totalReplied = accounts.reduce((sum, a) => sum + (a.total_replied || 0), 0);
+                const avgHealth = accounts.length > 0
+                    ? Math.round(accounts.reduce((sum, a) => sum + (a.health_score || 0), 0) / accounts.length)
+                    : 0;
+
+                setStats({
+                    totalSent, totalOpened, totalReplied, avgHealth,
+                    openRate: totalSent > 0 ? Math.round((totalOpened / totalSent) * 100) : 0,
+                    replyRate: totalSent > 0 ? Math.round((totalReplied / totalSent) * 100) : 0
+                });
+            }, []);
+
+            return (
+                <div className="flex-1 overflow-y-auto h-screen">
+                    <header className="sticky top-0 z-30 bg-white border-b border-slate-200 h-[80px] flex items-center px-10">
+                        <div className="flex items-center gap-6">
+                            <button onClick={() => setIsHidden(!isHidden)} className="p-3 rounded-2xl bg-slate-50 text-slate-500"><Icon name="Menu" /></button>
+                            <div>
+                                <h1 className="text-2xl font-black text-slate-900">Intelligence Analytics</h1>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Performance Insights & Metrics</p>
+                            </div>
+                        </div>
+                    </header>
+                    <main className="p-10 max-w-[1600px] mx-auto animate-fade-in">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+                            {[
+                                { label: 'OPEN RATE', value: `${stats.openRate}%`, color: '#F59E0B', icon: 'TrendingUp', sub: 'Across all active channels' },
+                                { label: 'REPLY RATE', value: `${stats.replyRate}%`, color: '#10B981', icon: 'MessageSquare', sub: `${stats.totalReplied} positive responses` },
+                                { label: 'AVG HEALTH', value: `${stats.avgHealth}%`, color: '#6366F1', icon: 'ShieldCheck', sub: 'Fleet operational status' }
+                            ].map((s, i) => (
+                                <div key={i} className="bg-white p-8 rounded-[40px] border-2 border-slate-100 shadow-xl shadow-slate-200/40">
+                                    <div className="flex justify-between items-start mb-6">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{s.label}</p>
+                                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: `${s.color}15` }}><Icon name={s.icon} color={s.color} /></div>
+                                    </div>
+                                    <p className="text-5xl font-black mb-2" style={{ color: s.color }}>{s.value}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{s.sub}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mt-10">
+                            <div className="bg-white p-10 rounded-[48px] border-2 border-slate-100 shadow-2xl">
+                                <h2 className="text-xl font-black text-slate-900 mb-8 uppercase tracking-widest">Aggregate Performance</h2>
+                                <div className="space-y-8">
+                                    {[
+                                        { label: 'Outreach Volume', val: stats.totalSent, max: 10000, color: '#6366F1' },
+                                        { label: 'Recipient Engagement', val: stats.totalOpened, max: stats.totalSent || 1, color: '#F59E0B' },
+                                        { label: 'Conversion Success', val: stats.totalReplied, max: stats.totalSent || 1, color: '#10B981' }
+                                    ].map((p, i) => (
+                                        <div key={i}>
+                                            <div className="flex justify-between mb-3 px-1">
+                                                <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{p.label}</span>
+                                                <span className="text-[11px] font-black text-slate-900">{p.val.toLocaleString()}</span>
+                                            </div>
+                                            <div className="w-full h-4 bg-slate-50 rounded-full overflow-hidden border border-slate-100">
+                                                <div className="h-full transition-all duration-1000" style={{ width: `${(p.val / p.max) * 100}%`, backgroundColor: p.color }}></div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="bg-white p-10 rounded-[48px] border-2 border-slate-100 shadow-2xl">
+                                <h2 className="text-xl font-black text-slate-900 mb-8 uppercase tracking-widest">Growth Vector</h2>
+                                <div className="space-y-6">
+                                    {[
+                                        { icon: 'CheckCircle', title: 'Optimal Open Frequency', desc: 'Engagement patterns indicate high delivery trust.', bg: '#ECFDF5', text: '#059669' },
+                                        { icon: 'Zap', title: 'Sequence Performance', desc: 'Channel saturation remains within safe thresholds.', bg: '#EFF6FF', text: '#2563EB' },
+                                        { icon: 'Activity', title: 'Fleet Velocity', desc: 'Warming protocols successfully mitigations risks.', bg: '#FDF2F8', text: '#DB2777' }
+                                    ].map((k, i) => (
+                                        <div key={i} className="flex gap-6 p-6 rounded-3xl border border-slate-50" style={{ backgroundColor: k.bg }}>
+                                            <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-sm"><Icon name={k.icon} color={k.text} /></div>
+                                            <div>
+                                                <p className="font-black text-slate-900 mb-0.5 text-sm">{k.title}</p>
+                                                <p className="text-[11px] font-bold opacity-60" style={{ color: k.text }}>{k.desc}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            )
+        };
+
+        const LogsPage = ({ isHidden, setIsHidden }) => {
+            const [activities, setActivities] = useState([]);
+            const [isLoading, setIsLoading] = useState(true);
+            const [filter, setFilter] = useState('all');
+
+            useEffect(() => {
+                const load = () => {
+                    setActivities(DataStore.getActivities().filter(a => !a.is_warmup));
+                    setIsLoading(false);
+                };
+                load();
+                const int = setInterval(load, 5000);
+                return () => clearInterval(int);
+            }, []);
+
+            const filtered = filter === 'all' ? activities : activities.filter(a => a.action === filter);
+
+            const Badge = ({ action }) => {
+                const map = {
+                    sent: { color: '#2563EB', bg: '#EFF6FF', label: 'TRANSMITTED' },
+                    opened: { color: '#D97706', bg: '#FFFBEB', label: 'ENGAGED' },
+                    replied: { color: '#059669', bg: '#F0FDF4', label: 'RESPONDED' }
+                };
+                const s = map[action] || map.sent;
+                return (
+                    <span className="px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border" style={{ color: s.color, backgroundColor: s.bg, borderColor: `${s.color}20` }}>{s.label}</span>
+                );
+            };
+
+            return (
+                <div className="flex-1 overflow-y-auto h-screen">
+                    <header className="sticky top-0 z-30 bg-white border-b border-slate-200 h-[80px] flex items-center px-10">
+                        <div className="flex items-center gap-6">
+                            <button onClick={() => setIsHidden(!isHidden)} className="p-3 rounded-2xl bg-slate-50 text-slate-500"><Icon name="Menu" /></button>
+                            <div>
+                                <h1 className="text-2xl font-black text-slate-900">Transmission Logs</h1>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Real-time Outreach Intelligence</p>
+                            </div>
+                        </div>
+                    </header>
+                    <main className="p-10 max-w-[1600px] mx-auto animate-fade-in">
+                        <div className="flex gap-4 mb-10 p-2.5 bg-white border-2 border-slate-100 rounded-[28px] max-w-fit shadow-sm">
+                            {['all', 'sent', 'opened', 'replied'].map(f => (
+                                <button key={f} onClick={() => setFilter(f)} className={`px-10 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${filter === f ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-400'}`}>{f} ({activities.filter(a => f === 'all' || a.action === f).length})</button>
+                            ))}
+                        </div>
+
+                        <div className="bg-white rounded-[48px] border-2 border-slate-100 shadow-2xl overflow-hidden shadow-slate-200/40">
+                            <table className="premium-table">
+                                <thead>
+                                    <tr>
+                                        <th className="w-[15%]">Status</th>
+                                        <th className="w-[20%]">Transmitter</th>
+                                        <th className="w-[25%]">Recipient</th>
+                                        <th className="w-[25%]">Subject Mesh</th>
+                                        <th className="text-right w-[15%]">Timestamp</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y-2 divide-slate-50">
+                                    {filtered.length === 0 ? (
+                                        <tr><td colSpan="5" className="py-32 text-center text-slate-300 font-bold uppercase tracking-widest">No transmissions recorded</td></tr>
+                                    ) : filtered.slice(0, 50).map((a, i) => (
+                                        <tr key={i} className="hover:bg-slate-50/50 transition-all">
+                                            <td className="px-10"><Badge action={a.action} /></td>
+                                            <td className="font-bold text-slate-900 text-sm whitespace-nowrap overflow-hidden text-ellipsis">{a.from.split('@')[0]}<span className="text-slate-400 font-medium">@{a.from.split('@')[1]}</span></td>
+                                            <td className="font-bold text-slate-600 text-sm truncate">{a.to}</td>
+                                            <td className="text-slate-500 text-sm truncate max-w-[200px] italic">{a.subject}</td>
+                                            <td className="text-right px-10 text-[10px] font-black text-slate-400">
+                                                {new Date(a.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </main >
+                </div >
+            )
+        };
+
+        const SettingsPage = ({ isHidden, setIsHidden }) => {
+            const [webhook, setWebhook] = useState(localStorage.getItem(STORAGE_KEYS.WEBHOOK_URL) || '');
+            const [crmApiUrl, setCrmApiUrl] = useState(localStorage.getItem(STORAGE_KEYS.API_URL) || '');
+            const [isLocked, setIsLocked] = useState(localStorage.getItem(STORAGE_KEYS.WEBHOOK_LOCKED) === 'true');
+            const [isTestMode, setIsTestMode] = useState(localStorage.getItem(STORAGE_KEYS.TEST_MODE) === 'true');
+            const [isSaving, setIsSaving] = useState(false);
+            const [activeTab, setActiveTab] = useState('integrations');
+
+            const save = () => {
+                setIsSaving(true);
+                localStorage.setItem(STORAGE_KEYS.WEBHOOK_URL, webhook);
+                localStorage.setItem(STORAGE_KEYS.API_URL, crmApiUrl);
+                localStorage.setItem(STORAGE_KEYS.WEBHOOK_LOCKED, isLocked ? 'true' : 'false');
+                localStorage.setItem(STORAGE_KEYS.TEST_MODE, isTestMode ? 'true' : 'false');
+                setTimeout(() => setIsSaving(false), 800);
+            };
+
+            const wipeWebhook = () => {
+                if (confirm('Permanently delete webhook configuration?')) {
+                    setWebhook('');
+                    setCrmApiUrl('');
+                    setIsLocked(false);
+                    setIsTestMode(false);
+                    localStorage.removeItem(STORAGE_KEYS.WEBHOOK_URL);
+                    localStorage.removeItem(STORAGE_KEYS.API_URL);
+                    localStorage.removeItem(STORAGE_KEYS.WEBHOOK_LOCKED);
+                    localStorage.removeItem(STORAGE_KEYS.TEST_MODE);
+                }
+            };
+
+            return (
+                <div className="flex-1 overflow-y-auto h-screen">
+                    <header className="sticky top-0 z-30 bg-white border-b border-slate-200 h-[80px] flex items-center px-10">
+                        <div className="flex items-center gap-6 flex-1">
+                            <button onClick={() => setIsHidden(!isHidden)} className="p-3 rounded-2xl bg-slate-50 text-slate-500"><Icon name="Menu" /></button>
+                            <div>
+                                <h1 className="text-2xl font-black text-slate-900">System Command</h1>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Configuration & Infrastructure</p>
+                            </div>
+                        </div>
+                        <button onClick={save} className="h-[48px] px-10 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-blue-100 hover:scale-105 active:scale-95 transition-all">
+                            {isSaving ? 'SYNCHRONIZING...' : 'UPDATE SYSTEM'}
+                        </button>
+                    </header>
+                    <main className="p-10 max-w-[1200px] mx-auto animate-fade-in">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
+                            <div className="space-y-2">
+                                {[
+                                    { id: 'integrations', label: 'MESH NODES', icon: 'Zap' },
+                                    { id: 'security', label: 'ACCESS PORT', icon: 'Shield' },
+                                    { id: 'data', label: 'CORE STORAGE', icon: 'Database' }
+                                ].map(t => (
+                                    <button key={t.id} onClick={() => setActiveTab(t.id)} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === t.id ? 'bg-slate-900 text-white shadow-2xl' : 'text-slate-400 hover:bg-slate-50'}`}>
+                                        <Icon name={t.icon} size={16} /> {t.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="md:col-span-3 space-y-8">
+                                {activeTab === 'integrations' && (
+                                    <div className="bg-white p-10 rounded-[48px] border-2 border-slate-100 shadow-2xl">
+                                        <h3 className="text-lg font-black text-slate-900 mb-8 uppercase tracking-widest flex items-center gap-4"><Icon name="Zap" color="#2563EB" /> n8n Automation Bridge</h3>
+                                        <div className="space-y-6">
+                                            <div>
+                                                <div className="flex justify-between items-center mb-4 ml-2">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em]">Primary Webhook Endpoint</label>
+                                                    <div className="flex gap-4">
+                                                        <button onClick={() => setIsLocked(!isLocked)} className={`p-2 rounded-lg transition-colors ${isLocked ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-400'}`}>
+                                                            <Icon name={isLocked ? 'Lock' : 'Unlock'} size={14} />
+                                                        </button>
+                                                        <button onClick={wipeWebhook} className="p-2 bg-red-50 text-red-500 rounded-lg"><Icon name="Trash2" size={14} /></button>
+                                                    </div>
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    value={webhook}
+                                                    onChange={e => !isLocked && setWebhook(e.target.value)}
+                                                    readOnly={isLocked}
+                                                    placeholder="https://your-n8n-mesh.com/webhook/..."
+                                                    className={`w-full h-16 rounded-[24px] border-2 border-slate-100 px-8 font-black text-sm focus:border-blue-500 outline-none transition-all font-mono ${isLocked ? 'bg-slate-100 opacity-60 cursor-not-allowed' : 'bg-slate-50 cursor-text'}`}
+                                                />
+                                            </div>
+                                            <div>
+                                                <div className="flex justify-between items-center mb-4 ml-2">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em]">Production CRM API (Vercel)</label>
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    value={crmApiUrl}
+                                                    onChange={e => !isLocked && setCrmApiUrl(e.target.value)}
+                                                    readOnly={isLocked}
+                                                    placeholder="https://your-crm.vercel.app"
+                                                    className={`w-full h-16 rounded-[24px] border-2 border-slate-100 px-8 font-black text-sm focus:border-blue-500 outline-none transition-all font-mono ${isLocked ? 'bg-slate-100 opacity-60 cursor-not-allowed' : 'bg-slate-50 cursor-text'}`}
+                                                />
+                                            </div>
+                                            <div className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                                                <div>
+                                                    <p className="text-sm font-black text-slate-900 uppercase tracking-widest">Workflow Environment</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">
+                                                        {isTestMode ? 'TEST MODE: Routing to /webhook-test/ (For Inactive Workflows)' : 'PRODUCTION: Routing to /webhook/ (For Active Workflows)'}
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={() => setIsTestMode(!isTestMode)}
+                                                    className={`w-14 h-8 rounded-full transition-all flex items-center px-1 ${isTestMode ? 'bg-amber-500' : 'bg-slate-300'}`}
+                                                >
+                                                    <div className={`w-6 h-6 rounded-full bg-white shadow-sm transform transition-all ${isTestMode ? 'translate-x-6' : 'translate-x-0'}`} />
+                                                </button>
+                                            </div>
+                                            <div className={`p-6 rounded-3xl border transition-all ${webhook ? 'bg-blue-50 border-blue-100' : 'bg-slate-50 border-slate-100'}`}>
+                                                <p className={`text-[11px] font-bold leading-relaxed uppercase tracking-wider ${webhook ? 'text-blue-700' : 'text-slate-400'}`}>
+                                                    {webhook ? `Bridge Status: ${isLocked ? 'LOCKED & OPERATIONAL' : 'ACTIVE'}. All outreach triggers will be routed through this endpoint.` : 'Bridge Disconnected. Please enter an n8n endpoint to enable internet communication.'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                {activeTab === 'security' && (
+                                    <div className="bg-white p-10 rounded-[48px] border-2 border-slate-100 shadow-2xl">
+                                        <h3 className="text-lg font-black text-slate-900 mb-8 uppercase tracking-widest flex items-center gap-4"><Icon name="Shield" color="#6366F1" /> Security Credentials</h3>
+                                        <div className="space-y-6">
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] ml-2 mb-4 block">System API Token</label>
+                                            <div className="relative">
+                                                <input type="password" value="cf_live_83920_auth_mesh_v1" readOnly className="w-full h-16 rounded-[24px] border-2 border-slate-100 px-8 font-black text-sm bg-slate-50 outline-none opacity-50 font-mono" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                {activeTab === 'data' && (
+                                    <div className="bg-white p-10 rounded-[48px] border-2 border-slate-100 shadow-2xl text-center">
+                                        <div className="w-20 h-20 bg-red-50 rounded-[32px] flex items-center justify-center mx-auto mb-6"><Icon name="AlertTriangle" color="#EF4444" size={32} /></div>
+                                        <h3 className="text-xl font-black text-slate-900 mb-2 uppercase tracking-widest">Wipe Local Core</h3>
+                                        <p className="text-sm text-slate-400 font-bold mb-10">This will permanently delete all accounts, batches, and activity logs from your browser storage.</p>
+                                        <button onClick={() => { if (confirm('Wipe system?')) { localStorage.clear(); window.location.reload(); } }} className="px-10 py-5 bg-red-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-red-100 hover:scale-105 active:scale-95 transition-all">Format System Data</button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            )
+        };
+
+        const Main = () => {
+            const [tab, setTab] = useState('dashboard');
+            const [isHidden, setIsHidden] = useState(false);
+
+            useEffect(() => {
+                DataStore.init();
+
+                const scheduler = setInterval(async () => {
+                    const batches = JSON.parse(localStorage.getItem('crm_batches_v1') || '[]');
+                    const now = new Date();
+                    let updated = false;
+
+                    for (let b of batches) {
+                        if (b.status === 'pending' && b.scheduled_date) {
+                            const schedDateArr = b.scheduled_date.split('-');
+                            const schedTimeArr = (b.scheduled_time || '00:00').split(':');
+                            const sched = new Date(schedDateArr[0], schedDateArr[1] - 1, schedDateArr[2], schedTimeArr[0], schedTimeArr[1]);
+
+                            if (sched <= now) {
+                                console.log(`[Autonomous Trigger] Executing batch: ${b.id}`);
+                                const res = await window.triggerSend(b);
+                                if (res.success) {
+                                    b.status = 'sent';
+                                    updated = true;
+                                }
+                            }
+                        }
+                    }
+
+                    if (updated) {
+                        localStorage.setItem('crm_batches_v1', JSON.stringify(batches));
+                        window.dispatchEvent(new Event('storage'));
+                    }
+                }, 15000); // 15s Precision
+
+                return () => clearInterval(scheduler);
+            }, []);
+
+            return (
+                <SidebarContext.Provider value={{ isHidden, setIsHidden }}>
+                    <div className="flex min-h-screen">
+                        <Sidebar activeTab={tab} setActiveTab={setTab} />
+                        {tab === 'dashboard' && <Dashboard onTabChange={setTab} isHidden={isHidden} setIsHidden={setIsHidden} />}
+                        {tab === 'accounts' && <AccountsPage isHidden={isHidden} setIsHidden={setIsHidden} />}
+                        {tab === 'leads' && <LeadsPage isHidden={isHidden} setIsHidden={setIsHidden} />}
+                        {tab === 'analytics' && <AnalyticsPage isHidden={isHidden} setIsHidden={setIsHidden} />}
+                        {tab === 'logs' && <LogsPage isHidden={isHidden} setIsHidden={setIsHidden} />}
+                        {tab === 'settings' && <SettingsPage isHidden={isHidden} setIsHidden={setIsHidden} />}
+                    </div>
+                </SidebarContext.Provider>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Main />);
+    </script>
+</body>
+
+</html>

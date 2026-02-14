@@ -1,0 +1,46 @@
+{
+    "version": 2,
+    "builds": [
+        {
+            "src": "index (1).html",
+            "use": "@vercel/static"
+        },
+        {
+            "src": "api/**/*.js",
+            "use": "@vercel/node"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/api/(.*)",
+            "dest": "/api/$1"
+        },
+        {
+            "src": "/(.*\\.(svg|png|jpg|jpeg|gif|ico|json))",
+            "dest": "/$1"
+        },
+        {
+            "src": "/",
+            "dest": "/index (1).html"
+        }
+    ],
+    "headers": [
+        {
+            "source": "/api/(.*)",
+            "headers": [
+                {
+                    "key": "Access-Control-Allow-Origin",
+                    "value": "*"
+                },
+                {
+                    "key": "Access-Control-Allow-Methods",
+                    "value": "GET, POST, OPTIONS"
+                },
+                {
+                    "key": "Access-Control-Allow-Headers",
+                    "value": "Content-Type, Authorization"
+                }
+            ]
+        }
+    ]
+}

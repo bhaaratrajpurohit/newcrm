@@ -1,0 +1,18 @@
+{
+    "name": "coldflow-crm",
+    "version": "1.0.0",
+    "description": "ColdFlow CRM - Professional Cold Email Outreach Platform",
+    "main": "index (1).html",
+    "scripts": {
+        "start": "vercel dev"
+    },
+    "keywords": [
+        "crm",
+        "cold-email",
+        "outreach",
+        "zoho",
+        "n8n"
+    ],
+    "author": "UdaanX",
+    "license": "MIT"
+}
